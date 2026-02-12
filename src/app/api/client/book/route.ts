@@ -87,39 +87,48 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Conflict detection
-    const conflicts = await prisma.appointment.findMany({
-      where: {
-        status: { in: ["SCHEDULED", "PENDING"] },
-        dateTime: { lt: endDate },
-        endDateTime: { gt: startDate },
-      },
+    // Conflict detection + create in serializable transaction to prevent TOCTOU race
+    const appointment = await prisma.$transaction(async (tx) => {
+      const conflicts = await tx.appointment.findMany({
+        where: {
+          status: { in: ["SCHEDULED", "PENDING"] },
+          dateTime: { lt: endDate },
+          endDateTime: { gt: startDate },
+        },
+      });
+
+      if (conflicts.length > 0) {
+        throw new Error("CONFLICT");
+      }
+
+      return tx.appointment.create({
+        data: {
+          clientId: client.clientId,
+          dateTime: startDate,
+          endDateTime: endDate,
+          status: "PENDING",
+          services: {
+            create: services.map((s) => ({
+              serviceId: s.id,
+              priceAtBooking: s.price,
+            })),
+          },
+        },
+        include: {
+          services: { include: { service: true } },
+        },
+      });
+    }, { isolationLevel: "Serializable" }).catch((err) => {
+      if (err.message === "CONFLICT") return null;
+      throw err;
     });
 
-    if (conflicts.length > 0) {
+    if (!appointment) {
       return NextResponse.json(
         { error: "Acest slot nu mai este disponibil" },
         { status: 409 }
       );
     }
-
-    const appointment = await prisma.appointment.create({
-      data: {
-        clientId: client.clientId,
-        dateTime: startDate,
-        endDateTime: endDate,
-        status: "PENDING",
-        services: {
-          create: services.map((s) => ({
-            serviceId: s.id,
-            priceAtBooking: s.price,
-          })),
-        },
-      },
-      include: {
-        services: { include: { service: true } },
-      },
-    });
 
     return NextResponse.json(appointment, { status: 201 });
   } catch (error) {
