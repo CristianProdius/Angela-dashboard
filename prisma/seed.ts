@@ -52,7 +52,7 @@ async function main() {
   for (const admin of admins) {
     await prisma.client.upsert({
       where: { phone: admin.phone },
-      update: { isAdmin: true },
+      update: { isAdmin: true, passwordHash: adminPassword },
       create: {
         name: admin.name,
         phone: admin.phone,
