@@ -100,6 +100,7 @@ export async function PUT(
 
       updateData.dateTime = newStart;
       updateData.endDateTime = newEnd;
+      updateData.rescheduleSent = false;
       dateTimeChanged = newStart.getTime() !== existing.dateTime.getTime();
     }
 

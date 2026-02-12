@@ -160,8 +160,8 @@ export default function AppointmentDetailPage({
     if (appointment) {
       const current = new Date(appointment.dateTime);
       setRescheduleDate(current);
-      setRescheduleHour(current.getUTCHours().toString());
-      setRescheduleMinute(current.getUTCMinutes().toString());
+      setRescheduleHour(current.getHours().toString());
+      setRescheduleMinute(current.getMinutes().toString());
     }
     setRescheduleOpen(true);
   };
