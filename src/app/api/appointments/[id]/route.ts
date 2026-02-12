@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { sendReschedule } from "@/lib/notifications";
+import { sendReschedule, sendConfirmation, sendAppointmentDeclined } from "@/lib/notifications";
 
-const VALID_STATUSES = ["SCHEDULED", "COMPLETED", "CANCELLED", "NO_SHOW"];
+const VALID_STATUSES = ["PENDING", "SCHEDULED", "COMPLETED", "CANCELLED", "NO_SHOW"];
 
 export async function GET(
   _request: NextRequest,
@@ -85,7 +85,7 @@ export async function PUT(
       const conflicts = await prisma.appointment.findMany({
         where: {
           id: { not: id },
-          status: "SCHEDULED",
+          status: { in: ["SCHEDULED", "PENDING"] },
           dateTime: { lt: newEnd },
           endDateTime: { gt: newStart },
         },
@@ -122,6 +122,19 @@ export async function PUT(
       sendReschedule(id, oldDateTime).catch((err) =>
         console.error("Reschedule notification error:", err)
       );
+    }
+
+    // Notify client when PENDING appointment is accepted or declined
+    if (body.status && existing.status === "PENDING") {
+      if (body.status === "SCHEDULED") {
+        sendConfirmation(id).catch((err) =>
+          console.error("Accept notification error:", err)
+        );
+      } else if (body.status === "CANCELLED") {
+        sendAppointmentDeclined(id).catch((err) =>
+          console.error("Decline notification error:", err)
+        );
+      }
     }
 
     return NextResponse.json(updated);

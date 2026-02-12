@@ -72,40 +72,49 @@ export async function POST(request: NextRequest) {
     const startDate = new Date(dateTime);
     const endDate = new Date(startDate.getTime() + totalDuration * 60000);
 
-    // Conflict detection: check for overlapping appointments
-    const conflicts = await prisma.appointment.findMany({
-      where: {
-        status: "SCHEDULED",
-        dateTime: { lt: endDate },
-        endDateTime: { gt: startDate },
-      },
+    // Conflict detection + create in serializable transaction to prevent TOCTOU race
+    const appointment = await prisma.$transaction(async (tx) => {
+      const conflicts = await tx.appointment.findMany({
+        where: {
+          status: { in: ["SCHEDULED", "PENDING"] },
+          dateTime: { lt: endDate },
+          endDateTime: { gt: startDate },
+        },
+      });
+
+      if (conflicts.length > 0) {
+        throw new Error("CONFLICT");
+      }
+
+      return tx.appointment.create({
+        data: {
+          clientId,
+          dateTime: startDate,
+          endDateTime: endDate,
+          notes,
+          services: {
+            create: services.map((s) => ({
+              serviceId: s.id,
+              priceAtBooking: s.price,
+            })),
+          },
+        },
+        include: {
+          client: true,
+          services: { include: { service: true } },
+        },
+      });
+    }, { isolationLevel: "Serializable" }).catch((err) => {
+      if (err.message === "CONFLICT") return null;
+      throw err;
     });
 
-    if (conflicts.length > 0) {
+    if (!appointment) {
       return NextResponse.json(
         { error: "Conflict de orar cu alta programare" },
         { status: 409 }
       );
     }
-
-    const appointment = await prisma.appointment.create({
-      data: {
-        clientId,
-        dateTime: startDate,
-        endDateTime: endDate,
-        notes,
-        services: {
-          create: services.map((s) => ({
-            serviceId: s.id,
-            priceAtBooking: s.price,
-          })),
-        },
-      },
-      include: {
-        client: true,
-        services: { include: { service: true } },
-      },
-    });
 
     // Fire-and-forget WhatsApp confirmation
     sendConfirmation(appointment.id).catch((err) =>

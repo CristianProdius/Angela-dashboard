@@ -120,6 +120,49 @@ Daca doresti sa anulezi sau sa reprogramezi, da-mi un mesaj. Pe maine! 👋`;
   }
 }
 
+export async function sendAppointmentDeclined(appointmentId: string) {
+  try {
+    const appointment = await prisma.appointment.findUnique({
+      where: { id: appointmentId },
+      include: {
+        client: true,
+        services: { include: { service: true } },
+      },
+    });
+
+    if (!appointment) return;
+
+    const timezone = await getTimezone();
+
+    const message = `Buna ${appointment.client.name},
+
+Din pacate, programarea ta din ${formatDateTime(appointment.dateTime, timezone)} nu a putut fi confirmata.
+
+Te rugam sa alegi un alt interval orar. Ne cerem scuze pentru inconvenient! 🙏`;
+
+    await sendTextMessage(appointment.client.phone, message);
+
+    await prisma.appointment.update({
+      where: { id: appointmentId },
+      data: { cancellationSent: true },
+    });
+  } catch (error) {
+    console.error("Failed to send decline notification:", error);
+  }
+}
+
+export async function sendPasswordResetOTP(phone: string, code: string) {
+  try {
+    const message = `Codul tau de resetare a parolei este: ${code}
+
+Codul expira in 15 minute. Daca nu ai cerut resetarea parolei, ignora acest mesaj.`;
+
+    await sendTextMessage(phone, message);
+  } catch (error) {
+    console.error("Failed to send password reset OTP:", error);
+  }
+}
+
 export async function sendReschedule(
   appointmentId: string,
   oldDateTime: Date

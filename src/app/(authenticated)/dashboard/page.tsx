@@ -1,12 +1,13 @@
 "use client";
 
-import useSWR from "swr";
+import useSWR, { mutate } from "swr";
 import { fetcher } from "@/lib/fetcher";
 import { format, startOfDay, endOfDay } from "date-fns";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CalendarDays, DollarSign, Clock, Users, Plus } from "lucide-react";
+import { CalendarDays, DollarSign, Clock, Users, Plus, Check, X } from "lucide-react";
 import Link from "next/link";
 
 interface AppointmentService {
@@ -25,6 +26,7 @@ interface Appointment {
 }
 
 const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+  PENDING: { label: "In asteptare", variant: "outline" },
   SCHEDULED: { label: "Programat", variant: "default" },
   COMPLETED: { label: "Finalizat", variant: "secondary" },
   CANCELLED: { label: "Anulat", variant: "destructive" },
@@ -41,6 +43,31 @@ export default function DashboardPage() {
     fetcher,
     { refreshInterval: 30000 }
   );
+
+  const { data: pendingAppointments } = useSWR<Appointment[]>(
+    "/api/appointments?status=PENDING",
+    fetcher,
+    { refreshInterval: 15000 }
+  );
+
+  const handlePendingAction = async (id: string, status: "SCHEDULED" | "CANCELLED") => {
+    try {
+      const res = await fetch(`/api/appointments/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (res.ok) {
+        toast.success(status === "SCHEDULED" ? "Programare acceptata" : "Programare refuzata");
+        mutate("/api/appointments?status=PENDING");
+        mutate(`/api/appointments?from=${from}&to=${to}`);
+      } else {
+        toast.error("Eroare la actualizare");
+      }
+    } catch {
+      toast.error("Eroare la actualizare");
+    }
+  };
 
   const scheduled = appointments?.filter((a) => a.status === "SCHEDULED") || [];
   const completed = appointments?.filter((a) => a.status === "COMPLETED") || [];
@@ -118,6 +145,56 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Pending Requests */}
+      {pendingAppointments && pendingAppointments.length > 0 && (
+        <div>
+          <h2 className="text-lg font-semibold mb-3">
+            Cereri de Programare ({pendingAppointments.length})
+          </h2>
+          <div className="space-y-2">
+            {pendingAppointments.map((apt) => (
+              <Card key={apt.id} className="border-yellow-500/50">
+                <CardContent className="py-3">
+                  <div className="flex items-center gap-4">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{apt.client.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {apt.client.phone}
+                      </p>
+                      <p className="text-sm text-muted-foreground truncate mt-1">
+                        {apt.services.map((s) => s.service.name).join(", ")}
+                      </p>
+                      <p className="text-sm font-mono mt-1">
+                        {format(new Date(apt.dateTime), "dd/MM/yyyy HH:mm")} -{" "}
+                        {format(new Date(apt.endDateTime), "HH:mm")}
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <Button
+                        size="sm"
+                        className="bg-green-600 hover:bg-green-700"
+                        onClick={() => handlePendingAction(apt.id, "SCHEDULED")}
+                      >
+                        <Check className="h-3 w-3 mr-1" />
+                        Accepta
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => handlePendingAction(apt.id, "CANCELLED")}
+                      >
+                        <X className="h-3 w-3 mr-1" />
+                        Refuza
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Next Up */}
       {nextAppointment && (

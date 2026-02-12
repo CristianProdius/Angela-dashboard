@@ -8,14 +8,16 @@ datasource db {
 }
 
 model Client {
-  id               String        @id @default(cuid())
+  id               String          @id @default(cuid())
   name             String
-  phone            String        @unique // digits only
+  phone            String          @unique // digits only
+  passwordHash     String?
   notes            String?
-  firstMessageSent Boolean       @default(false)
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  firstMessageSent Boolean         @default(false)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
   appointments     Appointment[]
+  passwordResets   PasswordReset[]
 }
 
 model Service {
@@ -30,6 +32,7 @@ model Service {
 }
 
 enum AppointmentStatus {
+  PENDING
   SCHEDULED
   COMPLETED
   CANCELLED
@@ -74,4 +77,25 @@ model Settings {
   workEndHour   Int    @default(20)
   slotInterval  Int    @default(30) // minutes
   updatedAt     DateTime @updatedAt
+}
+
+model PasswordReset {
+  id        String   @id @default(cuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id])
+  code      String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([clientId])
+}
+
+model BlockedDate {
+  id        String   @id @default(cuid())
+  startDate DateTime
+  endDate   DateTime
+  reason    String?
+  createdAt DateTime @default(now())
 }
