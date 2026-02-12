@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { clientBookingSchema } from "@/lib/validators";
 import { getClientFromRequest } from "@/lib/client-auth";
 import { startOfDay, endOfDay } from "date-fns";
+import { toZonedTime } from "date-fns-tz";
 
 export async function POST(request: NextRequest) {
   try {
@@ -54,8 +55,11 @@ export async function POST(request: NextRequest) {
     // Check work hours
     const settings = await prisma.settings.findFirst();
     if (settings) {
-      const startHour = startDate.getHours() + startDate.getMinutes() / 60;
-      const endHour = endDate.getHours() + endDate.getMinutes() / 60;
+      const tz = settings.timezone || "Europe/Chisinau";
+      const zonedStart = toZonedTime(startDate, tz);
+      const zonedEnd = toZonedTime(endDate, tz);
+      const startHour = zonedStart.getHours() + zonedStart.getMinutes() / 60;
+      const endHour = zonedEnd.getHours() + zonedEnd.getMinutes() / 60;
       if (startHour < settings.workStartHour || endHour > settings.workEndHour) {
         return NextResponse.json(
           { error: "Ora selectata este in afara programului de lucru" },
@@ -64,9 +68,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Check blocked dates
-    const dayStart = startOfDay(startDate);
-    const dayEnd = endOfDay(startDate);
+    // Check blocked dates (convert to business timezone before day boundary calc)
+    const tz = settings?.timezone || "Europe/Chisinau";
+    const zonedDate = toZonedTime(startDate, tz);
+    const dayStart = startOfDay(zonedDate);
+    const dayEnd = endOfDay(zonedDate);
     const blockedDate = await prisma.blockedDate.findFirst({
       where: {
         startDate: { lte: dayEnd },
