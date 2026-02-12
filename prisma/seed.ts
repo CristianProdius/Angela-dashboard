@@ -1,9 +1,9 @@
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import bcrypt from "bcryptjs";
 
-const connectionString =
-  process.env.DATABASE_URL ||
-  "postgresql://barber:barber123@localhost:5432/barberapp?schema=public";
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) throw new Error("DATABASE_URL environment variable is required");
 const adapter = new PrismaPg({ connectionString });
 const prisma = new PrismaClient({ adapter });
 
@@ -38,6 +38,26 @@ async function main() {
       create: {
         id: service.name.toLowerCase().replace(/\s+/g, "-"),
         ...service,
+      },
+    });
+  }
+
+  // Seed admin accounts
+  const adminPassword = await bcrypt.hash("admin123", 12);
+  const admins = [
+    { phone: "37368200722", name: "Admin 1" },
+    { phone: "37369165304", name: "Admin 2" },
+  ];
+
+  for (const admin of admins) {
+    await prisma.client.upsert({
+      where: { phone: admin.phone },
+      update: { isAdmin: true },
+      create: {
+        name: admin.name,
+        phone: admin.phone,
+        passwordHash: adminPassword,
+        isAdmin: true,
       },
     });
   }

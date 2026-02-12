@@ -69,8 +69,7 @@ export default function ForgotPasswordPage() {
       }
 
       toast.success("Parola a fost schimbata cu succes!");
-      // Use full navigation to ensure the Set-Cookie from reset-password is applied
-      window.location.href = "/client/dashboard";
+      router.push("/client/dashboard");
     } catch {
       toast.error("Eroare la resetare");
     } finally {
@@ -147,7 +146,7 @@ export default function ForgotPasswordPage() {
           )}
           <div className="mt-4 text-center">
             <Link
-              href="/client/login"
+              href="/login"
               className="text-sm text-muted-foreground hover:underline"
             >
               Inapoi la autentificare

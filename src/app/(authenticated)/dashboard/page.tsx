@@ -9,29 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CalendarDays, DollarSign, Clock, Users, Plus, Check, X } from "lucide-react";
 import Link from "next/link";
-
-interface AppointmentService {
-  service: { name: string };
-  priceAtBooking: number;
-}
-
-interface Appointment {
-  id: string;
-  dateTime: string;
-  endDateTime: string;
-  status: string;
-  notes: string | null;
-  client: { id: string; name: string; phone: string };
-  services: AppointmentService[];
-}
-
-const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  PENDING: { label: "In asteptare", variant: "outline" },
-  SCHEDULED: { label: "Programat", variant: "default" },
-  COMPLETED: { label: "Finalizat", variant: "secondary" },
-  CANCELLED: { label: "Anulat", variant: "destructive" },
-  NO_SHOW: { label: "Neprezentare", variant: "outline" },
-};
+import { Appointment, STATUS_MAP } from "@/types";
 
 export default function DashboardPage() {
   const today = new Date();
@@ -264,8 +242,8 @@ export default function DashboardPage() {
                         .reduce((s, svc) => s + svc.priceAtBooking, 0)
                         .toFixed(2)}{" "}MDL
                     </span>
-                    <Badge variant={statusMap[apt.status]?.variant || "default"}>
-                      {statusMap[apt.status]?.label || apt.status}
+                    <Badge variant={STATUS_MAP[apt.status]?.variant || "default"}>
+                      {STATUS_MAP[apt.status]?.label || apt.status}
                     </Badge>
                   </div>
                 </CardContent>

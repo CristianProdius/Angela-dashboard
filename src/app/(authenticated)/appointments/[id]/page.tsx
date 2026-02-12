@@ -72,7 +72,6 @@ const statusVariant: Record<string, "default" | "secondary" | "destructive" | "o
   NO_SHOW: "outline",
 };
 
-const hours = Array.from({ length: 14 }, (_, i) => i + 7); // 7-20
 const minutes = [0, 15, 30, 45];
 
 export default function AppointmentDetailPage({
@@ -87,6 +86,15 @@ export default function AppointmentDetailPage({
   const [rescheduleHour, setRescheduleHour] = useState("10");
   const [rescheduleMinute, setRescheduleMinute] = useState("0");
   const [rescheduling, setRescheduling] = useState(false);
+
+  const { data: settings } = useSWR<{ workStartHour: number; workEndHour: number }>(
+    "/api/settings",
+    fetcher
+  );
+  const hours = Array.from(
+    { length: (settings?.workEndHour ?? 20) - (settings?.workStartHour ?? 7) },
+    (_, i) => i + (settings?.workStartHour ?? 7)
+  );
 
   const { data: appointment } = useSWR<AppointmentDetail>(
     `/api/appointments/${id}`,

@@ -2,10 +2,10 @@
 set -e
 
 echo "Running database migrations..."
-npx prisma migrate deploy 2>/dev/null || echo "No migrations to run or migration failed (might need prisma db push instead)"
+npx prisma migrate deploy
 
 echo "Pushing database schema..."
-npx prisma db push --skip-generate 2>/dev/null || true
+npx prisma db push
 
 echo "Starting application..."
 exec node server.js

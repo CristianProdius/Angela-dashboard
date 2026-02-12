@@ -198,7 +198,7 @@ Pe curand! 👋`;
 
     await prisma.appointment.update({
       where: { id: appointmentId },
-      data: { rescheduleSent: true },
+      data: { rescheduleSent: true, reminderSent: false },
     });
   } catch (error) {
     console.error("Failed to send reschedule notification:", error);

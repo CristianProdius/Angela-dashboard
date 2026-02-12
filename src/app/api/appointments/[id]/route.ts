@@ -81,23 +81,6 @@ export async function PUT(
       );
       const newEnd = new Date(newStart.getTime() + totalDuration * 60000);
 
-      // Conflict check excluding current appointment
-      const conflicts = await prisma.appointment.findMany({
-        where: {
-          id: { not: id },
-          status: { in: ["SCHEDULED", "PENDING"] },
-          dateTime: { lt: newEnd },
-          endDateTime: { gt: newStart },
-        },
-      });
-
-      if (conflicts.length > 0) {
-        return NextResponse.json(
-          { error: "Conflict de orar cu alta programare" },
-          { status: 409 }
-        );
-      }
-
       updateData.dateTime = newStart;
       updateData.endDateTime = newEnd;
       updateData.rescheduleSent = false;
@@ -108,14 +91,44 @@ export async function PUT(
       updateData.notes = body.notes;
     }
 
-    const updated = await prisma.appointment.update({
-      where: { id },
-      data: updateData,
-      include: {
-        client: true,
-        services: { include: { service: true } },
-      },
+    // Use serializable transaction for conflict check + update to prevent race conditions
+    const result = await prisma.$transaction(async (tx) => {
+      if (updateData.dateTime) {
+        const conflicts = await tx.appointment.findMany({
+          where: {
+            id: { not: id },
+            status: { in: ["SCHEDULED", "PENDING"] },
+            dateTime: { lt: updateData.endDateTime as Date },
+            endDateTime: { gt: updateData.dateTime as Date },
+          },
+        });
+
+        if (conflicts.length > 0) {
+          throw new Error("CONFLICT");
+        }
+      }
+
+      return tx.appointment.update({
+        where: { id },
+        data: updateData,
+        include: {
+          client: true,
+          services: { include: { service: true } },
+        },
+      });
+    }, { isolationLevel: "Serializable" }).catch((err) => {
+      if (err.message === "CONFLICT") return null;
+      throw err;
     });
+
+    if (!result) {
+      return NextResponse.json(
+        { error: "Conflict de orar cu alta programare" },
+        { status: 409 }
+      );
+    }
+
+    const updated = result;
 
     // Fire-and-forget notifications
     if (dateTimeChanged) {
