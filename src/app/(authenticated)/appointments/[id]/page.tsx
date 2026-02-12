@@ -1,6 +1,6 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 import useSWR, { mutate } from "swr";
 import { useRouter } from "next/navigation";
 import { fetcher } from "@/lib/fetcher";
@@ -18,12 +18,21 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Calendar } from "@/components/ui/calendar";
+import {
   ArrowLeft,
   Phone,
   Clock,
   DollarSign,
   Trash2,
   MessageSquare,
+  CalendarIcon,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -40,6 +49,7 @@ interface AppointmentDetail {
   notes: string | null;
   notificationSent: boolean;
   reminderSent: boolean;
+  rescheduleSent: boolean;
   client: { id: string; name: string; phone: string };
   services: AppointmentService[];
 }
@@ -58,6 +68,9 @@ const statusVariant: Record<string, "default" | "secondary" | "destructive" | "o
   NO_SHOW: "outline",
 };
 
+const hours = Array.from({ length: 14 }, (_, i) => i + 7); // 7-20
+const minutes = [0, 15, 30, 45];
+
 export default function AppointmentDetailPage({
   params,
 }: {
@@ -65,6 +78,11 @@ export default function AppointmentDetailPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
+  const [rescheduleOpen, setRescheduleOpen] = useState(false);
+  const [rescheduleDate, setRescheduleDate] = useState<Date | undefined>();
+  const [rescheduleHour, setRescheduleHour] = useState("10");
+  const [rescheduleMinute, setRescheduleMinute] = useState("0");
+  const [rescheduling, setRescheduling] = useState(false);
 
   const { data: appointment } = useSWR<AppointmentDetail>(
     `/api/appointments/${id}`,
@@ -89,6 +107,38 @@ export default function AppointmentDetailPage({
     }
   };
 
+  const handleReschedule = async () => {
+    if (!rescheduleDate) {
+      toast.error("Selecteaza o data");
+      return;
+    }
+
+    setRescheduling(true);
+    try {
+      const newDateTime = new Date(rescheduleDate);
+      newDateTime.setHours(parseInt(rescheduleHour), parseInt(rescheduleMinute), 0, 0);
+
+      const res = await fetch(`/api/appointments/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dateTime: newDateTime.toISOString() }),
+      });
+
+      if (res.ok) {
+        mutate(`/api/appointments/${id}`);
+        setRescheduleOpen(false);
+        toast.success("Programare reprogramata cu succes");
+      } else {
+        const data = await res.json();
+        toast.error(data.error || "Eroare la reprogramare");
+      }
+    } catch {
+      toast.error("Eroare la reprogramare");
+    } finally {
+      setRescheduling(false);
+    }
+  };
+
   const handleDelete = async () => {
     if (!confirm("Sunteti sigur ca doriti sa stergeti aceasta programare?")) return;
     try {
@@ -104,6 +154,16 @@ export default function AppointmentDetailPage({
     } catch {
       toast.error("Eroare la stergere");
     }
+  };
+
+  const openRescheduleDialog = () => {
+    if (appointment) {
+      const current = new Date(appointment.dateTime);
+      setRescheduleDate(current);
+      setRescheduleHour(current.getHours().toString());
+      setRescheduleMinute(current.getMinutes().toString());
+    }
+    setRescheduleOpen(true);
   };
 
   if (!appointment) {
@@ -181,7 +241,19 @@ export default function AppointmentDetailPage({
       {/* Date & Time */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm">Data si Ora</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm">Data si Ora</CardTitle>
+            {appointment.status === "SCHEDULED" && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={openRescheduleDialog}
+              >
+                <CalendarIcon className="h-3 w-3 mr-1" />
+                Reprogrameaza
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-2">
@@ -244,6 +316,12 @@ export default function AppointmentDetailPage({
               {appointment.reminderSent ? "Da" : "Nu"}
             </Badge>
           </div>
+          {appointment.rescheduleSent && (
+            <div className="flex justify-between">
+              <span>Reprogramare trimisa</span>
+              <Badge variant="secondary">Da</Badge>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -268,6 +346,63 @@ export default function AppointmentDetailPage({
         <Trash2 className="h-4 w-4 mr-2" />
         Sterge Programare
       </Button>
+
+      {/* Reschedule Dialog */}
+      <Dialog open={rescheduleOpen} onOpenChange={setRescheduleOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reprogrameaza</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Calendar
+              mode="single"
+              selected={rescheduleDate}
+              onSelect={setRescheduleDate}
+              disabled={{ before: new Date() }}
+              className="mx-auto"
+            />
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium">Ora:</label>
+              <Select value={rescheduleHour} onValueChange={setRescheduleHour}>
+                <SelectTrigger className="w-[80px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {hours.map((h) => (
+                    <SelectItem key={h} value={h.toString()}>
+                      {h.toString().padStart(2, "0")}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <span>:</span>
+              <Select value={rescheduleMinute} onValueChange={setRescheduleMinute}>
+                <SelectTrigger className="w-[80px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {minutes.map((m) => (
+                    <SelectItem key={m} value={m.toString()}>
+                      {m.toString().padStart(2, "0")}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setRescheduleOpen(false)}
+            >
+              Anuleaza
+            </Button>
+            <Button onClick={handleReschedule} disabled={rescheduling}>
+              {rescheduling ? "Se salveaza..." : "Salveaza"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

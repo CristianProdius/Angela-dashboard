@@ -8,13 +8,14 @@ datasource db {
 }
 
 model Client {
-  id           String        @id @default(cuid())
-  name         String
-  phone        String        @unique // digits only
-  notes        String?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  appointments Appointment[]
+  id               String        @id @default(cuid())
+  name             String
+  phone            String        @unique // digits only
+  notes            String?
+  firstMessageSent Boolean       @default(false)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  appointments     Appointment[]
 }
 
 model Service {
@@ -44,6 +45,8 @@ model Appointment {
   status           AppointmentStatus    @default(SCHEDULED)
   notificationSent Boolean              @default(false)
   reminderSent     Boolean              @default(false)
+  cancellationSent Boolean              @default(false)
+  rescheduleSent   Boolean              @default(false)
   notes            String?
   createdAt        DateTime             @default(now())
   updatedAt        DateTime             @updatedAt
