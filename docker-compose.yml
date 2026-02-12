@@ -4,7 +4,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: barber
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-barber123}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: barberapp
     volumes:
       - pgdata:/var/lib/postgresql/data
@@ -37,7 +37,7 @@ services:
     ports:
       - "3001:3001"
     environment:
-      DATABASE_URL: postgresql://barber:${POSTGRES_PASSWORD:-barber123}@db:5432/barberapp?schema=public
+      DATABASE_URL: postgresql://barber:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/barberapp?schema=public
       AUTH_SECRET: ${AUTH_SECRET:-change-me-to-a-random-secret-at-least-32-chars}
       # Admin passwords are stored in the database (seeded via prisma seed)
       WAHA_API_URL: http://waha:3000

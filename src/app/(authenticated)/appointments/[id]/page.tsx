@@ -92,8 +92,8 @@ export default function AppointmentDetailPage({
     fetcher
   );
   const hours = Array.from(
-    { length: (settings?.workEndHour ?? 20) - (settings?.workStartHour ?? 7) },
-    (_, i) => i + (settings?.workStartHour ?? 7)
+    { length: (settings?.workEndHour ?? 20) - (settings?.workStartHour ?? 8) },
+    (_, i) => i + (settings?.workStartHour ?? 8)
   );
 
   const { data: appointment } = useSWR<AppointmentDetail>(

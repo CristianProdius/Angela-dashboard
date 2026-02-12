@@ -43,7 +43,9 @@ async function main() {
   }
 
   // Seed admin accounts
-  const adminPassword = await bcrypt.hash("admin123", 12);
+  const rawPassword = process.env.ADMIN_SEED_PASSWORD || "admin123";
+  const adminPassword = await bcrypt.hash(rawPassword, 12);
+  console.log("Admin accounts seeded (change password via Settings after first login)");
   const admins = [
     { phone: "37368200722", name: "Admin 1" },
     { phone: "37369165304", name: "Admin 2" },

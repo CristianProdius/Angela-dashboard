@@ -69,7 +69,7 @@ export default function ForgotPasswordPage() {
       }
 
       toast.success("Parola a fost schimbata cu succes!");
-      router.push("/client/dashboard");
+      router.push("/login");
     } catch {
       toast.error("Eroare la resetare");
     } finally {

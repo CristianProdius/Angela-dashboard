@@ -53,9 +53,12 @@ export default function LoginPage() {
         }
 
         router.push("/dashboard");
-      } else {
+      } else if (data.role === "client") {
         // Full page load to ensure the Set-Cookie header is applied
         window.location.href = "/client/dashboard";
+      } else {
+        toast.error("Raspuns neasteptat de la server");
+        setLoading(false);
       }
     } catch {
       toast.error("Eroare la autentificare");
