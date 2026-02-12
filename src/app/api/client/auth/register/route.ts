@@ -58,7 +58,19 @@ export async function POST(request: NextRequest) {
     );
     response.headers.append("Set-Cookie", setCookie);
     return response;
-  } catch (error) {
+  } catch (error: unknown) {
+    // Handle unique constraint violation (concurrent registration race condition)
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      error.code === "P2002"
+    ) {
+      return NextResponse.json(
+        { error: "Un cont cu acest numar exista deja" },
+        { status: 409 }
+      );
+    }
     console.error("POST /api/client/auth/register error:", error);
     return NextResponse.json({ error: "Eroare interna" }, { status: 500 });
   }
