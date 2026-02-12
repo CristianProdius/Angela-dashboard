@@ -54,8 +54,8 @@ export default function LoginPage() {
 
         router.push("/dashboard");
       } else {
-        // Client session cookie already set by the API
-        router.push("/client/dashboard");
+        // Full page load to ensure the Set-Cookie header is applied
+        window.location.href = "/client/dashboard";
       }
     } catch {
       toast.error("Eroare la autentificare");
