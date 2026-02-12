@@ -28,10 +28,27 @@ export async function POST(request: NextRequest) {
 
     const { startDate, endDate, reason } = parsed.data;
 
+    const parsedStart = new Date(startDate);
+    const parsedEnd = new Date(endDate);
+
+    if (isNaN(parsedStart.getTime()) || isNaN(parsedEnd.getTime())) {
+      return NextResponse.json(
+        { error: "Data invalida" },
+        { status: 400 }
+      );
+    }
+
+    if (parsedEnd < parsedStart) {
+      return NextResponse.json(
+        { error: "Data de sfarsit trebuie sa fie dupa data de inceput" },
+        { status: 400 }
+      );
+    }
+
     const blockedDate = await prisma.blockedDate.create({
       data: {
-        startDate: new Date(startDate),
-        endDate: new Date(endDate),
+        startDate: parsedStart,
+        endDate: parsedEnd,
         reason: reason || null,
       },
     });

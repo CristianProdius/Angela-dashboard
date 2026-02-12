@@ -101,6 +101,13 @@ export async function GET(request: NextRequest) {
     const startMinutes = settings.workStartHour * 60;
     const endMinutes = settings.workEndHour * 60;
 
+    if (settings.slotInterval <= 0) {
+      return NextResponse.json(
+        { error: "Intervalul de sloturi este invalid" },
+        { status: 500 }
+      );
+    }
+
     for (let m = startMinutes; m < endMinutes; m += settings.slotInterval) {
       const hours = Math.floor(m / 60);
       const mins = m % 60;
