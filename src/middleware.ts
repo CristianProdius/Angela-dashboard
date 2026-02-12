@@ -44,11 +44,11 @@ export default auth(async (req) => {
     if (!payload) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
-    // Set headers for downstream routes
-    const response = NextResponse.next();
-    response.headers.set("x-client-id", payload.sub);
-    response.headers.set("x-client-phone", payload.phone);
-    return response;
+    // Forward client identity as request headers to downstream route handlers
+    const requestHeaders = new Headers(req.headers);
+    requestHeaders.set("x-client-id", payload.sub);
+    requestHeaders.set("x-client-phone", payload.phone);
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   // Protected client pages - verify client-token cookie
@@ -61,10 +61,10 @@ export default auth(async (req) => {
     if (!payload) {
       return Response.redirect(new URL("/client/login", req.nextUrl));
     }
-    const response = NextResponse.next();
-    response.headers.set("x-client-id", payload.sub);
-    response.headers.set("x-client-phone", payload.phone);
-    return response;
+    const requestHeaders = new Headers(req.headers);
+    requestHeaders.set("x-client-id", payload.sub);
+    requestHeaders.set("x-client-phone", payload.phone);
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   // Protected API route for cron - uses bearer token

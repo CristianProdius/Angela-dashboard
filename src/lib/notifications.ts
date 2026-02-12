@@ -152,11 +152,15 @@ Te rugam sa alegi un alt interval orar. Ne cerem scuze pentru inconvenient! 🙏
 }
 
 export async function sendPasswordResetOTP(phone: string, code: string) {
-  const message = `Codul tau de resetare a parolei este: ${code}
+  try {
+    const message = `Codul tau de resetare a parolei este: ${code}
 
 Codul expira in 15 minute. Daca nu ai cerut resetarea parolei, ignora acest mesaj.`;
 
-  await sendTextMessage(phone, message);
+    await sendTextMessage(phone, message);
+  } catch (error) {
+    console.error("Failed to send password reset OTP:", error);
+  }
 }
 
 export async function sendReschedule(
