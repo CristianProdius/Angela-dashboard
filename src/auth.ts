@@ -1,7 +1,5 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import { prisma } from "@/lib/prisma";
-import { verifyPassword } from "@/lib/password";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
@@ -16,6 +14,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const password = credentials?.password as string;
 
         if (!phone || !password) return null;
+
+        // Dynamic imports to avoid bundling Node.js modules into Edge middleware
+        const { prisma } = await import("@/lib/prisma");
+        const { verifyPassword } = await import("@/lib/password");
 
         const client = await prisma.client.findUnique({ where: { phone } });
         if (!client || !client.isAdmin || !client.passwordHash) return null;
