@@ -63,6 +63,9 @@ export const blockedDateSchema = z.object({
   startDate: z.string().min(1, "Data de inceput este obligatorie"),
   endDate: z.string().min(1, "Data de sfarsit este obligatorie"),
   reason: z.string().optional(),
+}).refine((data) => new Date(data.endDate) >= new Date(data.startDate), {
+  message: "Data de sfarsit trebuie sa fie dupa data de inceput",
+  path: ["endDate"],
 });
 
 export const passwordResetSchema = z.object({

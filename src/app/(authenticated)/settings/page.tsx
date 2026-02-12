@@ -83,6 +83,10 @@ export default function SettingsPage() {
       toast.error("Selectati datele de inceput si sfarsit");
       return;
     }
+    if (blockedEnd < blockedStart) {
+      toast.error("Data de sfarsit trebuie sa fie dupa data de inceput");
+      return;
+    }
     setSavingBlocked(true);
     try {
       const res = await fetch("/api/settings/blocked-dates", {
