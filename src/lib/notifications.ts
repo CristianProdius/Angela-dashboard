@@ -14,6 +14,16 @@ function formatDateTime(date: Date, timezone: string): string {
   return format(zonedDate, "dd/MM/yyyy 'la' HH:mm", { locale: ro });
 }
 
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export async function sendFirstTimeIntro(phone: string, clientName: string) {
+  const message = `Salut ${clientName}! 💇‍♀️ Asta-i Angela!
+De acum o sa-ti trimit confirmarile si reminder-ele pentru programari pe aici. 😊`;
+  await sendTextMessage(phone, message);
+}
+
 export async function sendConfirmation(appointmentId: string) {
   try {
     const appointment = await prisma.appointment.findUnique({
@@ -26,9 +36,20 @@ export async function sendConfirmation(appointmentId: string) {
 
     if (!appointment) return;
 
+    // Check if this is a first-time client
+    if (!appointment.client.firstMessageSent) {
+      await sendFirstTimeIntro(
+        appointment.client.phone,
+        appointment.client.name
+      );
+      await sleep(2000);
+      await prisma.client.update({
+        where: { id: appointment.client.id },
+        data: { firstMessageSent: true },
+      });
+    }
+
     const timezone = await getTimezone();
-    const settings = await prisma.settings.findFirst();
-    const businessName = settings?.businessName || "Frizerie";
 
     const serviceList = appointment.services
       .map((s) => `- ${s.service.name}`)
@@ -41,7 +62,7 @@ export async function sendConfirmation(appointmentId: string) {
 
     const message = `Buna ${appointment.client.name}! ✂️
 
-Programarea ta la *${businessName}* a fost confirmata:
+Programarea ta a fost confirmata:
 
 📅 ${formatDateTime(appointment.dateTime, timezone)}
 
@@ -76,19 +97,17 @@ export async function sendReminder(appointmentId: string) {
     if (!appointment) return;
 
     const timezone = await getTimezone();
-    const settings = await prisma.settings.findFirst();
-    const businessName = settings?.businessName || "Frizerie";
 
     const message = `Reminder! 📋
 
-Buna ${appointment.client.name}, ai o programare maine la *${businessName}*:
+Buna ${appointment.client.name}, ai o programare maine:
 
 📅 ${formatDateTime(appointment.dateTime, timezone)}
 
 Servicii:
 ${appointment.services.map((s) => `- ${s.service.name}`).join("\n")}
 
-Daca doresti sa anulezi sau sa reprogramezi, te rugam sa ne contactezi. Pe maine! 👋`;
+Daca doresti sa anulezi sau sa reprogramezi, da-mi un mesaj. Pe maine! 👋`;
 
     await sendTextMessage(appointment.client.phone, message);
 
@@ -98,5 +117,47 @@ Daca doresti sa anulezi sau sa reprogramezi, te rugam sa ne contactezi. Pe maine
     });
   } catch (error) {
     console.error("Failed to send reminder:", error);
+  }
+}
+
+export async function sendReschedule(
+  appointmentId: string,
+  oldDateTime: Date
+) {
+  try {
+    const appointment = await prisma.appointment.findUnique({
+      where: { id: appointmentId },
+      include: {
+        client: true,
+        services: { include: { service: true } },
+      },
+    });
+
+    if (!appointment) return;
+
+    const timezone = await getTimezone();
+
+    const serviceList = appointment.services
+      .map((s) => `- ${s.service.name}`)
+      .join("\n");
+
+    const message = `Hei ${appointment.client.name}! 📅 Programarea ta a fost reprogramata:
+
+❌ Vechea data: ${formatDateTime(oldDateTime, timezone)}
+✅ Noua data: ${formatDateTime(appointment.dateTime, timezone)}
+
+Servicii:
+${serviceList}
+
+Pe curand! 👋`;
+
+    await sendTextMessage(appointment.client.phone, message);
+
+    await prisma.appointment.update({
+      where: { id: appointmentId },
+      data: { rescheduleSent: true },
+    });
+  } catch (error) {
+    console.error("Failed to send reschedule notification:", error);
   }
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { sendReschedule } from "@/lib/notifications";
 
 const VALID_STATUSES = ["SCHEDULED", "COMPLETED", "CANCELLED", "NO_SHOW"];
 
@@ -48,6 +49,8 @@ export async function PUT(
     }
 
     const updateData: Record<string, unknown> = {};
+    let dateTimeChanged = false;
+    const oldDateTime = existing.dateTime;
 
     if (body.status) {
       if (!VALID_STATUSES.includes(body.status)) {
@@ -97,6 +100,7 @@ export async function PUT(
 
       updateData.dateTime = newStart;
       updateData.endDateTime = newEnd;
+      dateTimeChanged = newStart.getTime() !== existing.dateTime.getTime();
     }
 
     if (body.notes !== undefined) {
@@ -111,6 +115,13 @@ export async function PUT(
         services: { include: { service: true } },
       },
     });
+
+    // Fire-and-forget notifications
+    if (dateTimeChanged) {
+      sendReschedule(id, oldDateTime).catch((err) =>
+        console.error("Reschedule notification error:", err)
+      );
+    }
 
     return NextResponse.json(updated);
   } catch (error) {
