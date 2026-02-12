@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
     // Conflict detection: check for overlapping appointments
     const conflicts = await prisma.appointment.findMany({
       where: {
-        status: "SCHEDULED",
+        status: { in: ["SCHEDULED", "PENDING"] },
         dateTime: { lt: endDate },
         endDateTime: { gt: startDate },
       },

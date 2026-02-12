@@ -33,6 +33,8 @@ import {
   Trash2,
   MessageSquare,
   CalendarIcon,
+  Check,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -55,6 +57,7 @@ interface AppointmentDetail {
 }
 
 const statusOptions = [
+  { value: "PENDING", label: "In asteptare" },
   { value: "SCHEDULED", label: "Programat" },
   { value: "COMPLETED", label: "Finalizat" },
   { value: "CANCELLED", label: "Anulat" },
@@ -62,6 +65,7 @@ const statusOptions = [
 ];
 
 const statusVariant: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  PENDING: "outline",
   SCHEDULED: "default",
   COMPLETED: "secondary",
   CANCELLED: "destructive",
@@ -219,6 +223,34 @@ export default function AppointmentDetailPage({
         </CardContent>
       </Card>
 
+      {/* Accept / Decline for PENDING */}
+      {appointment.status === "PENDING" && (
+        <Card className="border-yellow-500/50">
+          <CardContent className="pt-6">
+            <p className="text-sm text-muted-foreground mb-3">
+              Aceasta programare asteapta confirmare
+            </p>
+            <div className="flex gap-2">
+              <Button
+                className="flex-1 bg-green-600 hover:bg-green-700"
+                onClick={() => handleStatusChange("SCHEDULED")}
+              >
+                <Check className="h-4 w-4 mr-1" />
+                Accepta
+              </Button>
+              <Button
+                className="flex-1"
+                variant="destructive"
+                onClick={() => handleStatusChange("CANCELLED")}
+              >
+                <X className="h-4 w-4 mr-1" />
+                Refuza
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Client Info */}
       <Card>
         <CardHeader>
@@ -243,7 +275,7 @@ export default function AppointmentDetailPage({
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm">Data si Ora</CardTitle>
-            {appointment.status === "SCHEDULED" && (
+            {(appointment.status === "SCHEDULED" || appointment.status === "PENDING") && (
               <Button
                 variant="outline"
                 size="sm"

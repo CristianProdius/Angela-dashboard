@@ -11,7 +11,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Save, RefreshCw, LogOut, MessageSquare, Wifi, WifiOff } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Calendar } from "@/components/ui/calendar";
+import { Save, RefreshCw, LogOut, MessageSquare, Wifi, WifiOff, Plus, Trash2, CalendarOff } from "lucide-react";
+import { format } from "date-fns";
+import { ro } from "date-fns/locale";
 
 interface Settings {
   businessName: string;
@@ -29,6 +39,13 @@ interface WhatsAppStatus {
 interface QRResult {
   qr?: string;
   error?: string;
+}
+
+interface BlockedDate {
+  id: string;
+  startDate: string;
+  endDate: string;
+  reason: string | null;
 }
 
 export default function SettingsPage() {
@@ -49,6 +66,66 @@ export default function SettingsPage() {
 
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [qrLoading, setQrLoading] = useState(false);
+
+  // Blocked dates
+  const { data: blockedDates, mutate: mutateBlocked } = useSWR<BlockedDate[]>(
+    "/api/settings/blocked-dates",
+    fetcher
+  );
+  const [blockedDialogOpen, setBlockedDialogOpen] = useState(false);
+  const [blockedStart, setBlockedStart] = useState<Date | undefined>();
+  const [blockedEnd, setBlockedEnd] = useState<Date | undefined>();
+  const [blockedReason, setBlockedReason] = useState("");
+  const [savingBlocked, setSavingBlocked] = useState(false);
+
+  const handleAddBlocked = async () => {
+    if (!blockedStart || !blockedEnd) {
+      toast.error("Selectati datele de inceput si sfarsit");
+      return;
+    }
+    setSavingBlocked(true);
+    try {
+      const res = await fetch("/api/settings/blocked-dates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          startDate: blockedStart.toISOString(),
+          endDate: blockedEnd.toISOString(),
+          reason: blockedReason || undefined,
+        }),
+      });
+      if (res.ok) {
+        toast.success("Zi libera adaugata");
+        setBlockedDialogOpen(false);
+        setBlockedStart(undefined);
+        setBlockedEnd(undefined);
+        setBlockedReason("");
+        mutateBlocked();
+      } else {
+        toast.error("Eroare la adaugare");
+      }
+    } catch {
+      toast.error("Eroare la adaugare");
+    } finally {
+      setSavingBlocked(false);
+    }
+  };
+
+  const handleDeleteBlocked = async (id: string) => {
+    try {
+      const res = await fetch(`/api/settings/blocked-dates/${id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        toast.success("Zi libera stearsa");
+        mutateBlocked();
+      } else {
+        toast.error("Eroare la stergere");
+      }
+    } catch {
+      toast.error("Eroare la stergere");
+    }
+  };
 
   useEffect(() => {
     if (settings && !initialized) {
@@ -243,6 +320,112 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Blocked Dates */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <CalendarOff className="h-4 w-4" />
+              Zile Libere
+            </CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setBlockedDialogOpen(true)}
+            >
+              <Plus className="h-3 w-3 mr-1" />
+              Adauga
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {!blockedDates?.length ? (
+            <p className="text-sm text-muted-foreground">
+              Nicio zi libera configurata
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {blockedDates.map((bd) => (
+                <div
+                  key={bd.id}
+                  className="flex items-center justify-between p-2 rounded-md border text-sm"
+                >
+                  <div>
+                    <p className="font-medium">
+                      {format(new Date(bd.startDate), "dd/MM/yyyy")}
+                      {bd.startDate !== bd.endDate &&
+                        ` - ${format(new Date(bd.endDate), "dd/MM/yyyy")}`}
+                    </p>
+                    {bd.reason && (
+                      <p className="text-xs text-muted-foreground">
+                        {bd.reason}
+                      </p>
+                    )}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleDeleteBlocked(bd.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={blockedDialogOpen} onOpenChange={setBlockedDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Adauga Zi Libera</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Data inceput</Label>
+              <Calendar
+                mode="single"
+                selected={blockedStart}
+                onSelect={setBlockedStart}
+                locale={ro}
+                className="mx-auto"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Data sfarsit</Label>
+              <Calendar
+                mode="single"
+                selected={blockedEnd}
+                onSelect={setBlockedEnd}
+                disabled={blockedStart ? { before: blockedStart } : undefined}
+                locale={ro}
+                className="mx-auto"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Motiv (optional)</Label>
+              <Input
+                value={blockedReason}
+                onChange={(e) => setBlockedReason(e.target.value)}
+                placeholder="Ex: Vacanta, Sarbatoare..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setBlockedDialogOpen(false)}
+            >
+              Anuleaza
+            </Button>
+            <Button onClick={handleAddBlocked} disabled={savingBlocked}>
+              {savingBlocked ? "Se salveaza..." : "Adauga"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Button className="w-full" onClick={handleSave} disabled={saving}>
         <Save className="h-4 w-4 mr-2" />
