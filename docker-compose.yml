@@ -1,0 +1,53 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: barber
+      POSTGRES_PASSWORD: barber123
+      POSTGRES_DB: barberapp
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U barber -d barberapp"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  waha:
+    image: devlikeapro/waha
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - WAHA_DEFAULT_SESSION=default
+      - WHATSAPP_API_KEY=${WAHA_API_KEY:-}
+      - WAHA_DASHBOARD_USERNAME=${WAHA_DASHBOARD_USERNAME:-admin}
+      - WAHA_DASHBOARD_PASSWORD=${WAHA_DASHBOARD_PASSWORD:-}
+      - WHATSAPP_SWAGGER_USERNAME=${WAHA_DASHBOARD_USERNAME:-admin}
+      - WHATSAPP_SWAGGER_PASSWORD=${WAHA_DASHBOARD_PASSWORD:-}
+      - WAHA_PRESENCE_AUTO_ONLINE=false
+      - WAHA_PRINT_QR=false
+
+  app:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      DATABASE_URL: postgresql://barber:barber123@db:5432/barberapp?schema=public
+      AUTH_SECRET: ${AUTH_SECRET:-change-me-to-a-random-secret-at-least-32-chars}
+      BARBER_PASSWORD: ${BARBER_PASSWORD:-admin123}
+      WAHA_API_URL: http://waha:3000
+      WAHA_API_KEY: ${WAHA_API_KEY:-}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-https://barber.prodiusenterprise.com}
+      AUTH_TRUST_HOST: "true"
+      CRON_SECRET: ${CRON_SECRET:-change-me-cron-secret}
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:

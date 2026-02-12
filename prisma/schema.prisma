@@ -1,0 +1,74 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Client {
+  id           String        @id @default(cuid())
+  name         String
+  phone        String        @unique // digits only
+  notes        String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  appointments Appointment[]
+}
+
+model Service {
+  id              String               @id @default(cuid())
+  name            String
+  durationMinutes Int
+  price           Float
+  active          Boolean              @default(true)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  appointments    AppointmentService[]
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+model Appointment {
+  id               String               @id @default(cuid())
+  clientId         String
+  client           Client               @relation(fields: [clientId], references: [id])
+  dateTime         DateTime // UTC
+  endDateTime      DateTime // UTC
+  status           AppointmentStatus    @default(SCHEDULED)
+  notificationSent Boolean              @default(false)
+  reminderSent     Boolean              @default(false)
+  notes            String?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  services         AppointmentService[]
+
+  @@index([dateTime])
+  @@index([clientId])
+}
+
+model AppointmentService {
+  appointmentId  String
+  appointment    Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  serviceId      String
+  service        Service     @relation(fields: [serviceId], references: [id])
+  priceAtBooking Float
+
+  @@id([appointmentId, serviceId])
+}
+
+model Settings {
+  id            String @id @default("singleton")
+  businessName  String @default("Frizerie")
+  timezone      String @default("Europe/Chisinau")
+  workStartHour Int    @default(8)
+  workEndHour   Int    @default(20)
+  slotInterval  Int    @default(30) // minutes
+  updatedAt     DateTime @updatedAt
+}

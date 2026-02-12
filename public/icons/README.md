@@ -1,0 +1,1 @@
+Replace icon-192x192.png and icon-512x512.png with real icons generated from icon.svg
