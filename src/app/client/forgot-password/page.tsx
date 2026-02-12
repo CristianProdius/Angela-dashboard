@@ -69,7 +69,8 @@ export default function ForgotPasswordPage() {
       }
 
       toast.success("Parola a fost schimbata cu succes!");
-      router.push("/client/dashboard");
+      // Use full navigation to ensure the Set-Cookie from reset-password is applied
+      window.location.href = "/client/dashboard";
     } catch {
       toast.error("Eroare la resetare");
     } finally {

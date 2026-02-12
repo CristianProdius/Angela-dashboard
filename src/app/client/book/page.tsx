@@ -70,11 +70,14 @@ export default function ClientBookPage() {
 
   const isDateBlocked = (date: Date): boolean => {
     if (!blockedDates) return false;
-    const d = date.getTime();
+    // Normalize to date-only (YYYY-MM-DD) to avoid timezone offset issues
+    const toDateStr = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const dStr = toDateStr(date);
     return blockedDates.some((bd) => {
-      const start = new Date(bd.startDate).getTime();
-      const end = new Date(bd.endDate).getTime();
-      return d >= start && d <= end;
+      const startStr = new Date(bd.startDate).toISOString().slice(0, 10);
+      const endStr = new Date(bd.endDate).toISOString().slice(0, 10);
+      return dStr >= startStr && dStr <= endStr;
     });
   };
 

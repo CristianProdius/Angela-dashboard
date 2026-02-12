@@ -1,7 +1,10 @@
 import { SignJWT, jwtVerify } from "jose";
 import { NextRequest } from "next/server";
 
-const SECRET = new TextEncoder().encode(process.env.AUTH_SECRET || "secret");
+if (!process.env.AUTH_SECRET) {
+  throw new Error("AUTH_SECRET environment variable is required");
+}
+const SECRET = new TextEncoder().encode(process.env.AUTH_SECRET);
 const COOKIE_NAME = "client-token";
 const EXPIRY_DAYS = 30;
 
