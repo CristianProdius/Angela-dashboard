@@ -22,6 +22,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true });
     }
 
+    // Rate limit: max 3 OTP requests per phone per hour
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const recentResets = await prisma.passwordReset.count({
+      where: {
+        clientId: client.id,
+        createdAt: { gt: oneHourAgo },
+      },
+    });
+
+    if (recentResets >= 3) {
+      // Don't reveal rate limiting details — same response as success
+      return NextResponse.json({ success: true });
+    }
+
     // Generate 6-digit OTP using cryptographically secure randomness
     const code = randomInt(100000, 1000000).toString();
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
