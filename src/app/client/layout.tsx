@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Scissors, CalendarDays, Plus, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 const navItems = [
   { href: "/client/dashboard", label: "Programari", icon: CalendarDays },
@@ -20,8 +21,12 @@ export default function ClientLayout({
   const router = useRouter();
 
   const handleLogout = async () => {
-    await fetch("/api/client/auth/logout", { method: "POST" });
-    router.push("/client/login");
+    try {
+      await fetch("/api/client/auth/logout", { method: "POST" });
+    } catch {
+      toast.error("Eroare la deconectare");
+    }
+    router.push("/login");
   };
 
   return (

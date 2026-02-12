@@ -15,7 +15,8 @@ export default auth(async (req) => {
     pathname.startsWith("/sw.js") ||
     pathname.startsWith("/manifest") ||
     pathname.startsWith("/icons") ||
-    pathname === "/offline"
+    pathname === "/offline" ||
+    pathname === "/"
   ) {
     return;
   }
@@ -55,11 +56,11 @@ export default auth(async (req) => {
   if (pathname.startsWith("/client/")) {
     const token = req.cookies.get(COOKIE_NAME)?.value;
     if (!token) {
-      return Response.redirect(new URL("/client/login", req.nextUrl));
+      return Response.redirect(new URL("/login", req.nextUrl));
     }
     const payload = await verifyClientSession(token);
     if (!payload) {
-      return Response.redirect(new URL("/client/login", req.nextUrl));
+      return Response.redirect(new URL("/login", req.nextUrl));
     }
     const requestHeaders = new Headers(req.headers);
     requestHeaders.set("x-client-id", payload.sub);
@@ -69,8 +70,12 @@ export default auth(async (req) => {
 
   // Protected API route for cron - uses bearer token
   if (pathname.startsWith("/api/cron")) {
+    const cronSecret = process.env.CRON_SECRET;
+    if (!cronSecret && process.env.NODE_ENV === "production") {
+      return Response.json({ error: "CRON_SECRET not configured" }, { status: 500 });
+    }
     const authHeader = req.headers.get("authorization");
-    if (authHeader === `Bearer ${process.env.CRON_SECRET}`) {
+    if (cronSecret && authHeader === `Bearer ${cronSecret}`) {
       return;
     }
     if (isLoggedIn) return;

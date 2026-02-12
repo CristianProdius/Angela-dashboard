@@ -9,35 +9,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CalendarDays, ChevronDown, ChevronUp } from "lucide-react";
 import Link from "next/link";
-
-interface AppointmentService {
-  service: { name: string };
-  priceAtBooking: number;
-}
-
-interface Appointment {
-  id: string;
-  dateTime: string;
-  endDateTime: string;
-  status: string;
-  services: AppointmentService[];
-}
-
-const statusConfig: Record<
-  string,
-  { label: string; variant: "default" | "secondary" | "destructive" | "outline" }
-> = {
-  PENDING: { label: "In asteptare", variant: "outline" },
-  SCHEDULED: { label: "Confirmat", variant: "default" },
-  COMPLETED: { label: "Finalizat", variant: "secondary" },
-  CANCELLED: { label: "Anulat", variant: "destructive" },
-  NO_SHOW: { label: "Neprezentare", variant: "destructive" },
-};
+import { ClientAppointment, STATUS_MAP } from "@/types";
 
 export default function ClientDashboardPage() {
   const [showPast, setShowPast] = useState(false);
 
-  const { data: appointments } = useSWR<Appointment[]>(
+  const { data: appointments } = useSWR<ClientAppointment[]>(
     "/api/client/appointments",
     fetcher,
     { refreshInterval: 30000 }
@@ -125,8 +102,8 @@ export default function ClientDashboardPage() {
   );
 }
 
-function AppointmentCard({ appointment }: { appointment: Appointment }) {
-  const config = statusConfig[appointment.status] || {
+function AppointmentCard({ appointment }: { appointment: ClientAppointment }) {
+  const config = STATUS_MAP[appointment.status] || {
     label: appointment.status,
     variant: "outline" as const,
   };

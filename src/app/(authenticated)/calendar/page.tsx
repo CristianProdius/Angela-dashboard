@@ -18,20 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-
-interface AppointmentService {
-  service: { name: string };
-  priceAtBooking: number;
-}
-
-interface Appointment {
-  id: string;
-  dateTime: string;
-  endDateTime: string;
-  status: string;
-  client: { name: string };
-  services: AppointmentService[];
-}
+import { Appointment, STATUS_MAP } from "@/types";
 
 export default function CalendarPage() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -119,22 +106,10 @@ export default function CalendarPage() {
                         </p>
                       </div>
                       <Badge
-                        variant={
-                          apt.status === "SCHEDULED"
-                            ? "default"
-                            : apt.status === "COMPLETED"
-                            ? "secondary"
-                            : "destructive"
-                        }
+                        variant={STATUS_MAP[apt.status]?.variant || "default"}
                         className="text-xs"
                       >
-                        {apt.status === "SCHEDULED"
-                          ? "Programat"
-                          : apt.status === "COMPLETED"
-                          ? "Finalizat"
-                          : apt.status === "CANCELLED"
-                          ? "Anulat"
-                          : "Neprezentare"}
+                        {STATUS_MAP[apt.status]?.label || apt.status}
                       </Badge>
                     </div>
                   </Link>

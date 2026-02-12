@@ -19,6 +19,7 @@ export async function GET(request: NextRequest) {
     const clients = await prisma.client.findMany({
       where,
       orderBy: { name: "asc" },
+      take: 200,
     });
 
     return NextResponse.json(clients);

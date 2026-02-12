@@ -36,6 +36,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (services.length !== serviceIds.length) {
+      return NextResponse.json(
+        { error: "Unul sau mai multe servicii nu sunt disponibile" },
+        { status: 400 }
+      );
+    }
+
     const totalDuration = services.reduce(
       (sum, s) => sum + s.durationMinutes,
       0

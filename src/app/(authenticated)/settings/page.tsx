@@ -19,7 +19,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Calendar } from "@/components/ui/calendar";
-import { Save, RefreshCw, LogOut, MessageSquare, Wifi, WifiOff, Plus, Trash2, CalendarOff } from "lucide-react";
+import { Save, RefreshCw, LogOut, MessageSquare, Wifi, WifiOff, Plus, Trash2, CalendarOff, KeyRound } from "lucide-react";
 import { format } from "date-fns";
 import { ro } from "date-fns/locale";
 
@@ -77,6 +77,12 @@ export default function SettingsPage() {
   const [blockedEnd, setBlockedEnd] = useState<Date | undefined>();
   const [blockedReason, setBlockedReason] = useState("");
   const [savingBlocked, setSavingBlocked] = useState(false);
+
+  // Password change
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [changingPassword, setChangingPassword] = useState(false);
 
   const handleAddBlocked = async () => {
     if (!blockedStart || !blockedEnd) {
@@ -435,6 +441,79 @@ export default function SettingsPage() {
         <Save className="h-4 w-4 mr-2" />
         {saving ? "Se salveaza..." : "Salveaza Setarile"}
       </Button>
+
+      {/* Password Change */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm flex items-center gap-2">
+            <KeyRound className="h-4 w-4" />
+            Schimba Parola
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Parola Curenta</Label>
+            <Input
+              type="password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              placeholder="Parola curenta"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Parola Noua</Label>
+            <Input
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="Minim 6 caractere"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Confirma Parola Noua</Label>
+            <Input
+              type="password"
+              value={confirmNewPassword}
+              onChange={(e) => setConfirmNewPassword(e.target.value)}
+              placeholder="Repeta parola noua"
+            />
+          </div>
+          <Button
+            className="w-full"
+            variant="outline"
+            disabled={changingPassword}
+            onClick={async () => {
+              if (newPassword !== confirmNewPassword) {
+                toast.error("Parolele noi nu coincid");
+                return;
+              }
+              setChangingPassword(true);
+              try {
+                const res = await fetch("/api/admin/change-password", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ currentPassword, newPassword }),
+                });
+                const data = await res.json();
+                if (res.ok) {
+                  toast.success("Parola a fost schimbata cu succes");
+                  setCurrentPassword("");
+                  setNewPassword("");
+                  setConfirmNewPassword("");
+                } else {
+                  toast.error(data.error || "Eroare la schimbarea parolei");
+                }
+              } catch {
+                toast.error("Eroare la schimbarea parolei");
+              } finally {
+                setChangingPassword(false);
+              }
+            }}
+          >
+            {changingPassword ? "Se schimba..." : "Schimba Parola"}
+          </Button>
+        </CardContent>
+      </Card>
 
       <Separator />
 

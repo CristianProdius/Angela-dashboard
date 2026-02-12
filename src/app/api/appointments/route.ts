@@ -14,8 +14,20 @@ export async function GET(request: NextRequest) {
 
     if (from || to) {
       where.dateTime = {};
-      if (from) (where.dateTime as Record<string, unknown>).gte = new Date(from);
-      if (to) (where.dateTime as Record<string, unknown>).lte = new Date(to);
+      if (from) {
+        const fromDate = new Date(from);
+        if (isNaN(fromDate.getTime())) {
+          return NextResponse.json({ error: "Parametru 'from' invalid" }, { status: 400 });
+        }
+        (where.dateTime as Record<string, unknown>).gte = fromDate;
+      }
+      if (to) {
+        const toDate = new Date(to);
+        if (isNaN(toDate.getTime())) {
+          return NextResponse.json({ error: "Parametru 'to' invalid" }, { status: 400 });
+        }
+        (where.dateTime as Record<string, unknown>).lte = toDate;
+      }
     }
 
     if (status) {
@@ -29,6 +41,7 @@ export async function GET(request: NextRequest) {
         services: { include: { service: true } },
       },
       orderBy: { dateTime: "asc" },
+      take: 200,
     });
 
     return NextResponse.json(appointments);
@@ -60,6 +73,13 @@ export async function POST(request: NextRequest) {
     if (services.length === 0) {
       return NextResponse.json(
         { error: "Niciun serviciu valid selectat" },
+        { status: 400 }
+      );
+    }
+
+    if (services.length !== serviceIds.length) {
+      return NextResponse.json(
+        { error: "Unul sau mai multe servicii nu sunt disponibile" },
         { status: 400 }
       );
     }

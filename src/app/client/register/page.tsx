@@ -106,7 +106,7 @@ export default function ClientRegisterPage() {
           <div className="mt-4 text-center">
             <p className="text-sm text-muted-foreground">
               Ai deja cont?{" "}
-              <Link href="/client/login" className="text-primary hover:underline">
+              <Link href="/login" className="text-primary hover:underline">
                 Autentifica-te
               </Link>
             </p>
