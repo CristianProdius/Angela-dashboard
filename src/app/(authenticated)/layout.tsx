@@ -84,8 +84,8 @@ export default function AuthenticatedLayout({
 
       {/* Mobile Bottom Nav */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t bg-card z-50">
-        <div className="flex items-center justify-around py-2">
-          {navItems.slice(0, 4).map((item) => {
+        <div className="flex items-center justify-around py-1">
+          {navItems.map((item) => {
             const Icon = item.icon;
             const isActive =
               pathname === item.href || pathname.startsWith(item.href + "/");
@@ -94,21 +94,21 @@ export default function AuthenticatedLayout({
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex flex-col items-center gap-1 px-2 py-1 text-xs",
+                  "flex flex-col items-center gap-0.5 px-1 py-1 text-[10px]",
                   isActive ? "text-primary" : "text-muted-foreground"
                 )}
               >
-                <Icon className="h-5 w-5" />
+                <Icon className="h-4 w-4" />
                 {item.label}
               </Link>
             );
           })}
           <Link
             href="/appointments/new"
-            className="flex flex-col items-center gap-1 px-2 py-1 text-xs text-primary"
+            className="flex flex-col items-center gap-0.5 px-1 py-1 text-[10px] text-primary"
           >
-            <div className="rounded-full bg-primary p-1.5">
-              <Plus className="h-4 w-4 text-primary-foreground" />
+            <div className="rounded-full bg-primary p-1">
+              <Plus className="h-3.5 w-3.5 text-primary-foreground" />
             </div>
           </Link>
         </div>

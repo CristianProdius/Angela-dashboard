@@ -1,4 +1,4 @@
-import { PrismaClient } from "../src/generated/prisma/client";
+import { PrismaClient, MessageTemplateType } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
 
@@ -64,6 +64,81 @@ async function main() {
     });
   }
 
+  // Seed message templates
+  const templates: { type: MessageTemplateType; content: string }[] = [
+    {
+      type: "FIRST_TIME_INTRO",
+      content: `Salut {clientName}! 💇‍♀️ Asta-i Angela!
+De acum o sa-ti trimit confirmarile si reminder-ele pentru programari pe aici. 😊`,
+    },
+    {
+      type: "CONFIRMATION",
+      content: `Buna {clientName}! ✂️
+
+Programarea ta a fost confirmata:
+
+📅 {dateTime}
+
+Servicii:
+{serviceList}
+
+💰 Total: {total} MDL
+
+Pe curand! 👋`,
+    },
+    {
+      type: "REMINDER",
+      content: `Reminder! 📋
+
+Buna {clientName}, ai o programare maine:
+
+📅 {dateTime}
+
+Servicii:
+{serviceList}
+
+Daca doresti sa anulezi sau sa reprogramezi, da-mi un mesaj. Pe maine! 👋`,
+    },
+    {
+      type: "APPOINTMENT_DECLINED",
+      content: `Buna {clientName},
+
+Din pacate, programarea ta din {dateTime} nu a putut fi confirmata.
+
+Te rugam sa alegi un alt interval orar. Ne cerem scuze pentru inconvenient! 🙏`,
+    },
+    {
+      type: "PASSWORD_RESET_OTP",
+      content: `Codul tau de resetare a parolei este: {code}
+
+Codul expira in 15 minute. Daca nu ai cerut resetarea parolei, ignora acest mesaj.`,
+    },
+    {
+      type: "RESCHEDULE",
+      content: `Hei {clientName}! 📅 Programarea ta a fost reprogramata:
+
+❌ Vechea data: {oldDateTime}
+✅ Noua data: {newDateTime}
+
+Servicii:
+{serviceList}
+
+Pe curand! 👋`,
+    },
+  ];
+
+  for (const template of templates) {
+    await prisma.messageTemplate.upsert({
+      where: { type: template.type },
+      update: {},
+      create: {
+        type: template.type,
+        content: template.content,
+      },
+    });
+  }
+
+  console.log("Message templates seeded");
   console.log("Seed completed successfully");
 }
 

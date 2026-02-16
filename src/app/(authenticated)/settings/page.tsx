@@ -11,6 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -19,7 +21,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Calendar } from "@/components/ui/calendar";
-import { Save, RefreshCw, LogOut, MessageSquare, Wifi, WifiOff, Plus, Trash2, CalendarOff, KeyRound } from "lucide-react";
+import { Save, RefreshCw, LogOut, MessageSquare, Wifi, WifiOff, Plus, Trash2, CalendarOff, KeyRound, Moon, Pencil } from "lucide-react";
 import { format } from "date-fns";
 import { ro } from "date-fns/locale";
 
@@ -29,6 +31,9 @@ interface Settings {
   workStartHour: number;
   workEndHour: number;
   slotInterval: number;
+  quietHoursEnabled: boolean;
+  quietHoursStart: number;
+  quietHoursEnd: number;
 }
 
 interface WhatsAppStatus {
@@ -48,6 +53,32 @@ interface BlockedDate {
   reason: string | null;
 }
 
+interface MessageTemplate {
+  id: string;
+  type: string;
+  content: string;
+  active: boolean;
+  updatedAt: string;
+}
+
+const TEMPLATE_LABELS: Record<string, string> = {
+  FIRST_TIME_INTRO: "Primul mesaj",
+  CONFIRMATION: "Confirmare programare",
+  REMINDER: "Reminder programare",
+  APPOINTMENT_DECLINED: "Programare refuzata",
+  PASSWORD_RESET_OTP: "Resetare parola (OTP)",
+  RESCHEDULE: "Reprogramare",
+};
+
+const TEMPLATE_VARIABLES: Record<string, string[]> = {
+  FIRST_TIME_INTRO: ["{clientName}"],
+  CONFIRMATION: ["{clientName}", "{dateTime}", "{serviceList}", "{total}"],
+  REMINDER: ["{clientName}", "{dateTime}", "{serviceList}"],
+  APPOINTMENT_DECLINED: ["{clientName}", "{dateTime}"],
+  PASSWORD_RESET_OTP: ["{code}"],
+  RESCHEDULE: ["{clientName}", "{oldDateTime}", "{newDateTime}", "{serviceList}"],
+};
+
 export default function SettingsPage() {
   const { data: settings } = useSWR<Settings>("/api/settings", fetcher);
   const { data: waStatus, mutate: mutateWa } = useSWR<WhatsAppStatus>(
@@ -61,6 +92,9 @@ export default function SettingsPage() {
   const [workStartHour, setWorkStartHour] = useState("");
   const [workEndHour, setWorkEndHour] = useState("");
   const [slotInterval, setSlotInterval] = useState("");
+  const [quietHoursEnabled, setQuietHoursEnabled] = useState(false);
+  const [quietHoursStart, setQuietHoursStart] = useState("22");
+  const [quietHoursEnd, setQuietHoursEnd] = useState("8");
   const [saving, setSaving] = useState(false);
   const [initialized, setInitialized] = useState(false);
 
@@ -83,6 +117,16 @@ export default function SettingsPage() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const [changingPassword, setChangingPassword] = useState(false);
+
+  // Message templates
+  const { data: templates, mutate: mutateTemplates } = useSWR<MessageTemplate[]>(
+    "/api/settings/message-templates",
+    fetcher
+  );
+  const [editingTemplate, setEditingTemplate] = useState<MessageTemplate | null>(null);
+  const [editContent, setEditContent] = useState("");
+  const [editActive, setEditActive] = useState(true);
+  const [savingTemplate, setSavingTemplate] = useState(false);
 
   const handleAddBlocked = async () => {
     if (!blockedStart || !blockedEnd) {
@@ -144,6 +188,9 @@ export default function SettingsPage() {
       setWorkStartHour(settings.workStartHour.toString());
       setWorkEndHour(settings.workEndHour.toString());
       setSlotInterval(settings.slotInterval.toString());
+      setQuietHoursEnabled(settings.quietHoursEnabled);
+      setQuietHoursStart(settings.quietHoursStart.toString());
+      setQuietHoursEnd(settings.quietHoursEnd.toString());
       setInitialized(true);
     }
   }, [settings, initialized]);
@@ -160,6 +207,9 @@ export default function SettingsPage() {
           workStartHour: parseInt(workStartHour),
           workEndHour: parseInt(workEndHour),
           slotInterval: parseInt(slotInterval),
+          quietHoursEnabled,
+          quietHoursStart: parseInt(quietHoursStart),
+          quietHoursEnd: parseInt(quietHoursEnd),
         }),
       });
 
@@ -190,6 +240,39 @@ export default function SettingsPage() {
       toast.error("Eroare la obtinerea QR Code");
     } finally {
       setQrLoading(false);
+    }
+  };
+
+  const handleEditTemplate = (template: MessageTemplate) => {
+    setEditingTemplate(template);
+    setEditContent(template.content);
+    setEditActive(template.active);
+  };
+
+  const handleSaveTemplate = async () => {
+    if (!editingTemplate) return;
+    setSavingTemplate(true);
+    try {
+      const res = await fetch("/api/settings/message-templates", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: editingTemplate.type,
+          content: editContent,
+          active: editActive,
+        }),
+      });
+      if (res.ok) {
+        toast.success("Sablon salvat");
+        setEditingTemplate(null);
+        mutateTemplates();
+      } else {
+        toast.error("Eroare la salvare");
+      }
+    } catch {
+      toast.error("Eroare la salvare");
+    } finally {
+      setSavingTemplate(false);
     }
   };
 
@@ -331,6 +414,59 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
+      {/* Quiet Hours */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Moon className="h-4 w-4" />
+            Ore de Liniste
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label>Activeaza Ore de Liniste</Label>
+              <p className="text-xs text-muted-foreground">
+                Mesajele trimise in acest interval vor fi puse in coada si trimise dupa terminarea orelor de liniste.
+              </p>
+            </div>
+            <Switch
+              checked={quietHoursEnabled}
+              onCheckedChange={setQuietHoursEnabled}
+            />
+          </div>
+          {quietHoursEnabled && (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Inceput (ora)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="23"
+                    value={quietHoursStart}
+                    onChange={(e) => setQuietHoursStart(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Sfarsit (ora)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="23"
+                    value={quietHoursEnd}
+                    onChange={(e) => setQuietHoursEnd(e.target.value)}
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Codurile OTP pentru resetarea parolei vor fi trimise imediat, indiferent de orele de liniste.
+              </p>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Blocked Dates */}
       <Card>
         <CardHeader>
@@ -432,6 +568,108 @@ export default function SettingsPage() {
             </Button>
             <Button onClick={handleAddBlocked} disabled={savingBlocked}>
               {savingBlocked ? "Se salveaza..." : "Adauga"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Message Templates */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm flex items-center gap-2">
+            <MessageSquare className="h-4 w-4" />
+            Sabloane Mesaje
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {!templates?.length ? (
+            <p className="text-sm text-muted-foreground">
+              Niciun sablon configurat. Rulati seed-ul pentru a crea sabloanele implicite.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {templates.map((template) => (
+                <div
+                  key={template.id}
+                  className="flex items-center justify-between p-2 rounded-md border text-sm"
+                >
+                  <div className="flex-1 min-w-0 mr-2">
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium">
+                        {TEMPLATE_LABELS[template.type] || template.type}
+                      </p>
+                      <Badge variant={template.active ? "default" : "secondary"}>
+                        {template.active ? "Activ" : "Inactiv"}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground truncate mt-0.5">
+                      {template.content.substring(0, 80)}...
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleEditTemplate(template)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Template Edit Dialog */}
+      <Dialog
+        open={editingTemplate !== null}
+        onOpenChange={(open) => { if (!open) setEditingTemplate(null); }}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              Editeaza: {editingTemplate ? TEMPLATE_LABELS[editingTemplate.type] || editingTemplate.type : ""}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label>Activ</Label>
+              <Switch
+                checked={editActive}
+                onCheckedChange={setEditActive}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Continut mesaj</Label>
+              <Textarea
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                rows={8}
+                className="font-mono text-sm"
+              />
+            </div>
+            {editingTemplate && TEMPLATE_VARIABLES[editingTemplate.type] && (
+              <div className="rounded-md bg-muted p-3">
+                <p className="text-xs font-medium mb-1">Variabile disponibile:</p>
+                <div className="flex flex-wrap gap-1">
+                  {TEMPLATE_VARIABLES[editingTemplate.type].map((v) => (
+                    <code key={v} className="text-xs bg-background px-1.5 py-0.5 rounded">
+                      {v}
+                    </code>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setEditingTemplate(null)}
+            >
+              Anuleaza
+            </Button>
+            <Button onClick={handleSaveTemplate} disabled={savingTemplate}>
+              {savingTemplate ? "Se salveaza..." : "Salveaza"}
             </Button>
           </DialogFooter>
         </DialogContent>
