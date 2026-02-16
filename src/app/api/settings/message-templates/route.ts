@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { messageTemplateSchema } from "@/lib/validators";
 import { invalidateTemplateCache } from "@/lib/notifications";
@@ -13,8 +14,23 @@ const VALID_TYPES: MessageTemplateType[] = [
   "RESCHEDULE",
 ];
 
+async function requireAdmin() {
+  const session = await auth();
+  if (!session?.user?.id) return null;
+  const admin = await prisma.client.findUnique({
+    where: { id: session.user.id },
+  });
+  if (!admin?.isAdmin) return null;
+  return admin;
+}
+
 export async function GET() {
   try {
+    const admin = await requireAdmin();
+    if (!admin) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const templates = await prisma.messageTemplate.findMany({
       orderBy: { type: "asc" },
     });
@@ -27,6 +43,11 @@ export async function GET() {
 
 export async function PUT(request: NextRequest) {
   try {
+    const admin = await requireAdmin();
+    if (!admin) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await request.json();
     const { type, ...data } = body;
 

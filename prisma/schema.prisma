@@ -122,12 +122,14 @@ model MessageTemplate {
 }
 
 model PendingMessage {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   phone        String
   message      String
   scheduledFor DateTime
-  sent         Boolean  @default(false)
-  createdAt    DateTime @default(now())
+  sent         Boolean   @default(false)
+  sentAt       DateTime?
+  retryCount   Int       @default(0)
+  createdAt    DateTime  @default(now())
 
   @@index([sent, scheduledFor])
 }

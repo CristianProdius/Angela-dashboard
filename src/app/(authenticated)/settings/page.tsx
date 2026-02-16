@@ -251,6 +251,10 @@ export default function SettingsPage() {
 
   const handleSaveTemplate = async () => {
     if (!editingTemplate) return;
+    if (!editContent.trim()) {
+      toast.error("Continutul sablonului nu poate fi gol");
+      return;
+    }
     setSavingTemplate(true);
     try {
       const res = await fetch("/api/settings/message-templates", {

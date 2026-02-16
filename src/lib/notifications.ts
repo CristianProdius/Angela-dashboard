@@ -169,7 +169,13 @@ export async function sendConfirmation(appointmentId: string) {
     const templates = await getTemplates();
     const template = templates.get("CONFIRMATION");
 
-    if (template && !template.active) return;
+    if (template && !template.active) {
+      await prisma.appointment.update({
+        where: { id: appointmentId },
+        data: { notificationSent: true },
+      });
+      return;
+    }
 
     const timezone = await getTimezone();
 
@@ -217,7 +223,13 @@ export async function sendReminder(appointmentId: string) {
     const templates = await getTemplates();
     const template = templates.get("REMINDER");
 
-    if (template && !template.active) return;
+    if (template && !template.active) {
+      await prisma.appointment.update({
+        where: { id: appointmentId },
+        data: { reminderSent: true },
+      });
+      return;
+    }
 
     const timezone = await getTimezone();
 
@@ -259,7 +271,13 @@ export async function sendAppointmentDeclined(appointmentId: string) {
     const templates = await getTemplates();
     const template = templates.get("APPOINTMENT_DECLINED");
 
-    if (template && !template.active) return;
+    if (template && !template.active) {
+      await prisma.appointment.update({
+        where: { id: appointmentId },
+        data: { cancellationSent: true },
+      });
+      return;
+    }
 
     const timezone = await getTimezone();
 
@@ -317,7 +335,13 @@ export async function sendReschedule(
     const templates = await getTemplates();
     const template = templates.get("RESCHEDULE");
 
-    if (template && !template.active) return;
+    if (template && !template.active) {
+      await prisma.appointment.update({
+        where: { id: appointmentId },
+        data: { rescheduleSent: true, reminderSent: false },
+      });
+      return;
+    }
 
     const timezone = await getTimezone();
 

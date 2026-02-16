@@ -94,7 +94,7 @@ export default function AuthenticatedLayout({
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex flex-col items-center gap-0.5 px-1 py-1 text-[10px]",
+                  "flex flex-col items-center gap-0.5 px-1 py-1 text-[11px]",
                   isActive ? "text-primary" : "text-muted-foreground"
                 )}
               >
@@ -105,7 +105,7 @@ export default function AuthenticatedLayout({
           })}
           <Link
             href="/appointments/new"
-            className="flex flex-col items-center gap-0.5 px-1 py-1 text-[10px] text-primary"
+            className="flex flex-col items-center gap-0.5 px-1 py-1 text-[11px] text-primary"
           >
             <div className="rounded-full bg-primary p-1">
               <Plus className="h-3.5 w-3.5 text-primary-foreground" />
