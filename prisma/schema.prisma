@@ -71,13 +71,16 @@ model AppointmentService {
 }
 
 model Settings {
-  id            String @id @default("singleton")
-  businessName  String @default("Frizerie")
-  timezone      String @default("Europe/Chisinau")
-  workStartHour Int    @default(8)
-  workEndHour   Int    @default(20)
-  slotInterval  Int    @default(30) // minutes
-  updatedAt     DateTime @updatedAt
+  id                String   @id @default("singleton")
+  businessName      String   @default("Frizerie")
+  timezone          String   @default("Europe/Chisinau")
+  workStartHour     Int      @default(8)
+  workEndHour       Int      @default(20)
+  slotInterval      Int      @default(30) // minutes
+  quietHoursEnabled Boolean  @default(false)
+  quietHoursStart   Int      @default(22) // 0-23
+  quietHoursEnd     Int      @default(8)  // 0-23
+  updatedAt         DateTime @updatedAt
 }
 
 model PasswordReset {
@@ -99,4 +102,34 @@ model BlockedDate {
   endDate   DateTime
   reason    String?
   createdAt DateTime @default(now())
+}
+
+enum MessageTemplateType {
+  FIRST_TIME_INTRO
+  CONFIRMATION
+  REMINDER
+  APPOINTMENT_DECLINED
+  PASSWORD_RESET_OTP
+  RESCHEDULE
+}
+
+model MessageTemplate {
+  id        String              @id @default(cuid())
+  type      MessageTemplateType @unique
+  content   String
+  active    Boolean             @default(true)
+  updatedAt DateTime            @updatedAt
+}
+
+model PendingMessage {
+  id           String    @id @default(cuid())
+  phone        String
+  message      String
+  scheduledFor DateTime
+  sent         Boolean   @default(false)
+  sentAt       DateTime?
+  retryCount   Int       @default(0)
+  createdAt    DateTime  @default(now())
+
+  @@index([sent, scheduledFor])
 }

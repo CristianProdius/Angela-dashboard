@@ -30,9 +30,17 @@ export const settingsSchema = z.object({
   workStartHour: z.coerce.number().int().min(0).max(23),
   workEndHour: z.coerce.number().int().min(0).max(23),
   slotInterval: z.coerce.number().int().min(5).max(120),
+  quietHoursEnabled: z.boolean().optional().default(false),
+  quietHoursStart: z.coerce.number().int().min(0).max(23).optional().default(22),
+  quietHoursEnd: z.coerce.number().int().min(0).max(23).optional().default(8),
 }).refine((data) => data.workStartHour < data.workEndHour, {
   message: "Ora de inceput trebuie sa fie inainte de ora de sfarsit",
   path: ["workEndHour"],
+});
+
+export const messageTemplateSchema = z.object({
+  content: z.string().min(1, "Continutul este obligatoriu"),
+  active: z.boolean(),
 });
 
 export const clientRegisterSchema = z.object({
@@ -87,3 +95,4 @@ export type ClientLoginInput = z.infer<typeof clientLoginSchema>;
 export type ClientBookingInput = z.infer<typeof clientBookingSchema>;
 export type BlockedDateInput = z.infer<typeof blockedDateSchema>;
 export type PasswordResetInput = z.infer<typeof passwordResetSchema>;
+export type MessageTemplateInput = z.infer<typeof messageTemplateSchema>;
