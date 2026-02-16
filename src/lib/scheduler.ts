@@ -1,6 +1,6 @@
 import cron from "node-cron";
 import { prisma } from "@/lib/prisma";
-import { sendReminder } from "@/lib/notifications";
+import { sendReminder, getQuietHoursConfig, isInQuietHours, getQuietHoursEndTime } from "@/lib/notifications";
 import { sendTextMessage } from "@/lib/waha";
 import { addDays, startOfDay, endOfDay, subDays } from "date-fns";
 import { toZonedTime, fromZonedTime } from "date-fns-tz";
@@ -56,6 +56,19 @@ export function startScheduler() {
 
     pendingMessageLock = true;
     try {
+      // Re-check quiet hours before sending — admin may have changed settings
+      const quietConfig = await getQuietHoursConfig();
+      if (isInQuietHours(quietConfig)) {
+        // Reschedule all pending messages to new quiet hours end
+        const newScheduledFor = getQuietHoursEndTime(quietConfig);
+        await prisma.pendingMessage.updateMany({
+          where: { sent: false, scheduledFor: { lte: new Date() } },
+          data: { scheduledFor: newScheduledFor },
+        });
+        console.log(`[Scheduler] Still in quiet hours, rescheduled pending messages to ${newScheduledFor.toISOString()}`);
+        return;
+      }
+
       const now = new Date();
       const pending = await prisma.pendingMessage.findMany({
         where: {

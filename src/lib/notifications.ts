@@ -59,14 +59,14 @@ export function invalidateTemplateCache() {
 
 // --- Quiet hours ---
 
-interface QuietHoursConfig {
+export interface QuietHoursConfig {
   enabled: boolean;
   start: number; // 0-23
   end: number;   // 0-23
   timezone: string;
 }
 
-async function getQuietHoursConfig(): Promise<QuietHoursConfig> {
+export async function getQuietHoursConfig(): Promise<QuietHoursConfig> {
   const settings = await prisma.settings.findFirst();
   return {
     enabled: settings?.quietHoursEnabled ?? false,
@@ -76,7 +76,7 @@ async function getQuietHoursConfig(): Promise<QuietHoursConfig> {
   };
 }
 
-function isInQuietHours(config: QuietHoursConfig): boolean {
+export function isInQuietHours(config: QuietHoursConfig): boolean {
   if (!config.enabled) return false;
 
   const now = toZonedTime(new Date(), config.timezone);
@@ -91,7 +91,7 @@ function isInQuietHours(config: QuietHoursConfig): boolean {
   }
 }
 
-function getQuietHoursEndTime(config: QuietHoursConfig): Date {
+export function getQuietHoursEndTime(config: QuietHoursConfig): Date {
   const now = toZonedTime(new Date(), config.timezone);
   const endToday = new Date(now);
   endToday.setHours(config.end, 0, 0, 0);
